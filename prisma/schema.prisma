@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Contractor {
+  id           String   @id @default(cuid())
+  placeId      String?  @unique
+  name         String
+  address      String
+  city         String
+  state        String
+  zip          String
+  mainService  String
+  keywords     String?
+  contactInfo  Json?
+  status       Status   @default(NOT_CONTACTED)
+  assignedToId String?
+  assignedTo   Member?  @relation(fields: [assignedToId], references: [id])
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  activities ActivityLog[]
+
+  @@unique([name, address])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model Member {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  assigned  Contractor[]
+}
+
+model ActivityLog {
+  id           String      @id @default(cuid())
+  actor        String
+  action       String
+  contractorId String?
+  contractor   Contractor? @relation(fields: [contractorId], references: [id])
+  fromStatus   Status?
+  toStatus     Status?
+  fromAssignee String?
+  toAssignee   String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+
+  @@index([contractorId])
+  @@index([actor])
+}
+
+enum Status {
+  NOT_CONTACTED
+  CONTACTED
+  RESPONSIVE
+  QUOTING
+  CONTRACTED
+  NON_RESPONSIVE
+}
