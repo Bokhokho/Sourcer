@@ -1,5 +1,8 @@
  {
   "name": "contractor-sourcing",
+  "prisma": {
+   "seed": "ts-node --transpile-only ./scripts/seed.ts"
+  },
   "version": "1.0.0",
   "private": true,
   "scripts": {
