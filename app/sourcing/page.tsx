@@ -28,5 +28,14 @@ export default async function SourcingPage() {
   // All active members for the assignment dropdown
   const allMembers = await prisma.member.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
   const plainMembers = allMembers.map((m) => ({ id: m.id, name: m.name }));
-  return <SourcingClient lists={lists} members={plainMembers} actor={actor} />;
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Sourcing</h1>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        View and manage your assignments across team members.  Drag
+        contractors between lists to reassign or update their status.
+      </p>
+      <SourcingClient lists={lists} members={plainMembers} actor={actor} />
+    </div>
+  );
 }

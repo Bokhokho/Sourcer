@@ -24,11 +24,17 @@ export default async function ResponsivePage() {
   const plainContractors = contractors.map((c) => ({ ...c })) as any;
   const plainMembers = members.map((m) => ({ id: m.id, name: m.name }));
   return (
-    <ResponsiveClient
-      initialData={plainContractors}
-      members={plainMembers}
-      actor={actor}
-      myMemberId={myMemberId}
-    />
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Responsive Contractors</h1>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Manage contractors who have responded positively.  Assign them to your team, update their status or export the list.
+      </p>
+      <ResponsiveClient
+        initialData={plainContractors}
+        members={plainMembers}
+        actor={actor}
+        myMemberId={myMemberId}
+      />
+    </div>
   );
 }
