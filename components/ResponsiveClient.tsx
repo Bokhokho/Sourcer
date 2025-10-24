@@ -20,6 +20,7 @@ export default function ResponsiveClient({ initialData, members, actor, myMember
   const handleUpdated = () => router.refresh();
   return (
     <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Responsive Contractors</h2>
       <ContractorTable
         data={initialData}
         members={members}
