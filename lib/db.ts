@@ -14,3 +14,14 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
+
+// lib/db.ts
+
+declare global {
+  // Prevent multiple Prisma instances in dev (Next.js hot reload)
+  var prisma: PrismaClient | undefined
+}
+
+export const db = globalThis.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = db
