@@ -1,58 +1,79 @@
-name: Plasmic Sync + Build (pnpm fixed)
-
-on:
-  repository_dispatch:
-    types: [plasmic]
+# Plasmic workflow v4
+name: Sync, build and deploy Plasmic app
 
 permissions:
   contents: write
   pull-requests: write
 
+on:
+  repository_dispatch:
+    types: [plasmic]
+
 jobs:
-  plasmic:
+  job:
+    name: Sync, build and deploy
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - id: checkout
+        name: Checking out repository...
+        uses: actions/checkout@v2
         with:
+          persist-credentials: false
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - id: node
+        name: Setting up node v18...
+        uses: actions/setup-node@v3
         with:
-          node-version: 18
-          check-latest: true
-
-      # ✅ The critical line that actually fixes "pnpm: not found"
-      - name: Install pnpm globally
-        run: npm install -g pnpm@9
-
-      # Optional but safe — ensure pnpm is really in PATH
-      - name: Verify pnpm installation
-        run: pnpm --version
-
-      - name: Install Plasmic CLI
-        run: npm install -g @plasmicapp/cli
-
-      - name: Install dependencies
-        run: pnpm install --ignore-scripts
-
-      - name: Plasmic sync
-        env:
-          # ✅ Your actual token directly here (works fine if repo is private)
-          PLASMIC_AUTH_TOKEN: "dW5GQmBBFeDbirVLYJcSvh4Du1ZsPqQlJY503qSpeYaCmBNkdHmaBrMzaaMTl1iVq3MTReojkblvcpYNW4qA"
-        run: |
-          npx plasmic sync --yes \
-            --projects "fbLWaWRGx4VJXYLXBiVVDd:dW5GQmBBFeDbirVLYJcSvh4Du1ZsPqQlJY503qSpeYaCmBNkdHmaBrMzaaMTl1iVq3MTReojkblvcpYNW4qA"
-
-      - name: Build the app
-        run: pnpm run build
-
-      - name: Commit and push changes
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add .
-          git commit -m "Plasmic sync [skip ci]" || echo "No changes"
-          git push
+          node-version: "18"
+      - id: cache
+        name: Recovering cache...
+        uses: actions/cache@v4
+        with:
+          key: lock-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+          path: ${{ github.event.client_payload.data.directory }}/node_modules
+      - id: init
+        name: Initializing Plasmic app...
+        uses: plasmicapp/plasmic-action@master
+        with:
+          run: init
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.event.client_payload.data.branch }}
+          directory: ${{ github.event.client_payload.data.directory }}
+          project_id: ${{ github.event.client_payload.data.projectId }}
+          project_api_token: ${{ github.event.client_payload.data.projectApiToken }}
+          platform: ${{ github.event.client_payload.data.platform }}
+          language: ${{ github.event.client_payload.data.language }}
+          scheme: ${{ github.event.client_payload.data.scheme }}
+          title: ${{ github.event.client_payload.data.title }}
+          description: ${{ github.event.client_payload.data.description }}
+      - id: sync
+        name: Syncing Plasmic project...
+        if: ${{ github.event.client_payload.data.scheme == 'codegen' && steps.init.outputs.synced != 'true' }}
+        uses: plasmicapp/plasmic-action@master
+        with:
+          run: sync
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.event.client_payload.data.branch }}
+          directory: ${{ github.event.client_payload.data.directory }}
+          project_id: ${{ github.event.client_payload.data.projectId }}
+          project_api_token: ${{ github.event.client_payload.data.projectApiToken }}
+          sync_action: ${{ github.event.client_payload.data.syncAction }}
+          title: ${{ github.event.client_payload.data.title }}
+          description: ${{ github.event.client_payload.data.description }}
+      - id: build
+        name: Building Plasmic app...
+        if: ${{ github.event.client_payload.data.publish }}
+        uses: plasmicapp/plasmic-action@master
+        with:
+          run: build
+          branch: ${{ github.event.client_payload.data.branch }}
+          directory: ${{ github.event.client_payload.data.directory }}
+          platform: ${{ github.event.client_payload.data.platform }}
+      - id: pr
+        name: Creating pull request...
+        uses: repo-sync/pull-request@v2
+        if: ${{ steps.sync.outputs.new_branch }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ steps.sync.outputs.new_branch }}
+          destination_branch: ${{ github.event.client_payload.data.branch }}
