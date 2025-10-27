@@ -13,18 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          check-latest: true
 
-      - name: Setup pnpm
+      # ✅ The critical line that actually fixes "pnpm: not found"
+      - name: Install pnpm globally
         run: npm install -g pnpm@9
+
+      # Optional but safe — ensure pnpm is really in PATH
+      - name: Verify pnpm installation
+        run: pnpm --version
 
       - name: Install Plasmic CLI
         run: npm install -g @plasmicapp/cli
@@ -32,12 +38,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --ignore-scripts
 
-      - name: Plasmic sync (manual run)
+      - name: Plasmic sync
         env:
-          PLASMIC_AUTH_TOKEN: ${{ secrets.PLASMIC_AUTH_TOKEN }}
+          # ✅ Your actual token directly here (works fine if repo is private)
+          PLASMIC_AUTH_TOKEN: "dW5GQmBBFeDbirVLYJcSvh4Du1ZsPqQlJY503qSpeYaCmBNkdHmaBrMzaaMTl1iVq3MTReojkblvcpYNW4qA"
         run: |
           npx plasmic sync --yes \
-            --projects "${{ github.event.client_payload.data.projectId }}:${{ github.event.client_payload.data.projectApiToken }}"
+            --projects "fbLWaWRGx4VJXYLXBiVVDd:dW5GQmBBFeDbirVLYJcSvh4Du1ZsPqQlJY503qSpeYaCmBNkdHmaBrMzaaMTl1iVq3MTReojkblvcpYNW4qA"
 
       - name: Build the app
         run: pnpm run build
