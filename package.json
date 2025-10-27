@@ -11,6 +11,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@measured/puck": "^0.20.2",
     "@plasmicapp/loader-nextjs": "^1.0.442",
     "@plasmicapp/react-web": "^0.2.405",
     "@prisma/client": "5.4.1",
