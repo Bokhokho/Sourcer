@@ -1,4 +1,4 @@
-# Plasmic workflow v4
+# Plasmic workflow v4 — Fixed for PNPM projects
 name: Sync, build and deploy Plasmic app
 
 permissions:
@@ -13,24 +13,46 @@ jobs:
   job:
     name: Sync, build and deploy
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout code
       - id: checkout
         name: Checking out repository...
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      # 2️⃣ Setup Node.js
       - id: node
-        name: Setting up node v18...
+        name: Setting up Node.js v18...
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: '18'
+          check-latest: true
+
+      # 3️⃣ Setup PNPM
+      - id: setup-pnpm
+        name: Installing pnpm...
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9 # You can set 8, 9, or 10 based on your project
+          run_install: false
+
+      # 4️⃣ Cache node_modules
       - id: cache
         name: Recovering cache...
         uses: actions/cache@v4
         with:
-          key: lock-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+          key: lock-${{ hashFiles('**/pnpm-lock.yaml') }}
           path: ${{ github.event.client_payload.data.directory }}/node_modules
+
+      # 5️⃣ Install dependencies
+      - id: install
+        name: Installing dependencies with pnpm...
+        run: pnpm install --ignore-scripts
+
+      # 6️⃣ Initialize Plasmic app
       - id: init
         name: Initializing Plasmic app...
         uses: plasmicapp/plasmic-action@master
@@ -46,6 +68,8 @@ jobs:
           scheme: ${{ github.event.client_payload.data.scheme }}
           title: ${{ github.event.client_payload.data.title }}
           description: ${{ github.event.client_payload.data.description }}
+
+      # 7️⃣ Sync Plasmic
       - id: sync
         name: Syncing Plasmic project...
         if: ${{ github.event.client_payload.data.scheme == 'codegen' && steps.init.outputs.synced != 'true' }}
@@ -60,15 +84,17 @@ jobs:
           sync_action: ${{ github.event.client_payload.data.syncAction }}
           title: ${{ github.event.client_payload.data.title }}
           description: ${{ github.event.client_payload.data.description }}
+
+      # 8️⃣ Build step (using pnpm)
       - id: build
         name: Building Plasmic app...
         if: ${{ github.event.client_payload.data.publish }}
-        uses: plasmicapp/plasmic-action@master
-        with:
-          run: build
-          branch: ${{ github.event.client_payload.data.branch }}
-          directory: ${{ github.event.client_payload.data.directory }}
-          platform: ${{ github.event.client_payload.data.platform }}
+        run: |
+          echo "Building Plasmic project with pnpm..."
+          pnpm run build
+        working-directory: ${{ github.event.client_payload.data.directory }}
+
+      # 9️⃣ Create Pull Request
       - id: pr
         name: Creating pull request...
         uses: repo-sync/pull-request@v2
